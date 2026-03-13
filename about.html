@@ -8,6 +8,7 @@
 
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="magnifier.css">
 
   <style>
     /* ===================== */
@@ -252,9 +253,11 @@
 <body>
 
   <!-- Magnifier Elements -->
-  <div id="magnifier">
+  <div id="magnifier" aria-hidden="true">
     <div id="magnifierContent"></div>
   </div>
+  <div id="zoomIndicator"></div>
+  <div id="zoomTip">💡 <strong>Tip:</strong> Use Ctrl + <strong>+</strong> or <strong>–</strong> to adjust magnifier zoom</div>
 
   <!-- NAVBAR -->
   <nav>
@@ -350,7 +353,7 @@
       });
     });
   </script>
-  <script src="js/magnifier.js"></script>
+  <script src="magnifier.js"></script>
 
 
 </body>

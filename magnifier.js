@@ -1,7 +1,6 @@
 /**
  * Optivox Magnifier Module
- * Provides accessible screen magnification functionality
- * with adjustable zoom levels via keyboard shortcuts
+ * Provides robust magnification and accessibility features.
  */
 
 (function() {
@@ -10,10 +9,10 @@
   // Configuration
   const config = {
     defaultZoom: 2,
-    minZoom: 1.5,
-    maxZoom: 5,
-    zoomStep: 0.5,
-    magnifierSize: 200
+    minZoom: 1.2,
+    maxZoom: 4,
+    zoomStep: 0.2,
+    magnifierSize: 220 // Matches CSS --magnifier-size
   };
 
   // DOM Elements
@@ -21,203 +20,191 @@
   const magnifierContent = document.getElementById('magnifierContent');
   
   // State
-  let zoomLevel = config.defaultZoom;
+  let zoomLevel = parseFloat(localStorage.getItem('optivox_zoom')) || config.defaultZoom;
   let contentCloned = false;
+  let isMagnifying = false;
+  let lastX = 0;
+  let lastY = 0;
 
   /**
-   * Clones the page content once for magnification
+   * Clones the page content accurately
    */
   function clonePageContent() {
     if (contentCloned) return;
     
-    // Clone entire document for magnification
+    // We clone the body but need to handle some specific cleaning
     const bodyClone = document.body.cloneNode(true);
     
-    // Remove magnifier elements from clone to avoid recursion
-    const elementsToRemove = ['#magnifier', '#zoomTip', '#zoomIndicator'];
-    elementsToRemove.forEach(selector => {
-      const element = bodyClone.querySelector(selector);
-      if (element) element.remove();
-    });
+    // Remove scripts and assistive elements from clone to prevent issues
+    const selectorsToRemove = [
+      'script', 
+      '#magnifier', 
+      '#zoomIndicator', 
+      '#zoomTip', 
+      '.skip-link',
+      'iframe'
+    ];
     
-    // Clear and set content
+    selectorsToRemove.forEach(selector => {
+      bodyClone.querySelectorAll(selector).forEach(el => el.remove());
+    });
+
+    // Ensure cloned IDs don't conflict (optional but safer)
+    bodyClone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    
     magnifierContent.innerHTML = '';
     magnifierContent.appendChild(bodyClone);
     
-    // Apply zoom transformation
-    magnifierContent.style.transform = `scale(${zoomLevel})`;
-    
     contentCloned = true;
+    updateZoom();
+  }
+
+  function updateZoom() {
+    if (magnifierContent) {
+      magnifierContent.style.transform = `scale(${zoomLevel})`;
+      localStorage.setItem('optivox_zoom', zoomLevel);
+    }
   }
 
   /**
-   * Updates the magnifier position based on cursor position
-   * @param {number} x - Cursor X coordinate
-   * @param {number} y - Cursor Y coordinate
+   * Precise position calculation including scroll offsets
    */
-  function updateMagnifierPosition(x, y) {
-    // Calculate offset to center the magnified area on cursor
-    const offsetX = -(x * zoomLevel - config.magnifierSize / 2);
-    const offsetY = -(y * zoomLevel - config.magnifierSize / 2);
+  function updatePosition(x, y) {
+    if (!magnifier || !magnifierContent) return;
+
+    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+    // Position the magnifier circle (viewport coordinates)
+    magnifier.style.left = `${x - config.magnifierSize / 2}px`;
+    magnifier.style.top = `${y - config.magnifierSize / 2}px`;
+
+    // Position the content inside (absolute page coordinates)
+    const centerX = (x + scrollX) * zoomLevel;
+    const centerY = (y + scrollY) * zoomLevel;
+    
+    const offsetX = config.magnifierSize / 2 - centerX;
+    const offsetY = config.magnifierSize / 2 - centerY;
+
     magnifierContent.style.left = `${offsetX}px`;
     magnifierContent.style.top = `${offsetY}px`;
   }
 
-  /**
-   * Handles mouse movement to position and update magnifier
-   */
   function handleMouseMove(e) {
-    const x = e.clientX;
-    const y = e.clientY;
+    if (!isMagnifying) {
+      magnifier.style.display = 'block';
+      clonePageContent();
+      isMagnifying = true;
+    }
     
-    // Clone content on first mouse move
-    clonePageContent();
-    
-    // Show and position magnifier circle
-    magnifier.style.display = 'block';
-    magnifier.style.left = `${x - config.magnifierSize / 2}px`;
-    magnifier.style.top = `${y - config.magnifierSize / 2}px`;
-    
-    // Update magnified content position
-    updateMagnifierPosition(x, y);
+    lastX = e.clientX;
+    lastY = e.clientY;
+    updatePosition(lastX, lastY);
   }
 
-  /**
-   * Handles keyboard shortcuts for zoom control
-   */
+  function handleScroll() {
+    if (isMagnifying) {
+      updatePosition(lastX, lastY);
+    }
+  }
+
   function handleKeyDown(e) {
+    // Ctrl + / - for Zoom
     if (e.ctrlKey || e.metaKey) {
       if (e.key === '+' || e.key === '=') {
         e.preventDefault();
         zoomLevel = Math.min(zoomLevel + config.zoomStep, config.maxZoom);
-        magnifierContent.style.transform = `scale(${zoomLevel})`;
-        showZoomLevel();
+        updateZoom();
+        updatePosition(lastX, lastY);
+        showIndicator(`Zoom: ${zoomLevel.toFixed(1)}x`);
       } else if (e.key === '-' || e.key === '_') {
         e.preventDefault();
         zoomLevel = Math.max(zoomLevel - config.zoomStep, config.minZoom);
-        magnifierContent.style.transform = `scale(${zoomLevel})`;
-        showZoomLevel();
+        updateZoom();
+        updatePosition(lastX, lastY);
+        showIndicator(`Zoom: ${zoomLevel.toFixed(1)}x`);
       }
+    }
+    
+    // Escape to hide tip
+    if (e.key === 'Escape') {
+      const tip = document.getElementById('zoomTip');
+      if (tip) tip.style.opacity = '0';
     }
   }
 
-  /**
-   * Displays zoom level indicator
-   */
-  function showZoomLevel() {
+  function showIndicator(text) {
     let indicator = document.getElementById('zoomIndicator');
+    if (!indicator) return;
     
-    if (!indicator) {
-      indicator = document.createElement('div');
-      indicator.id = 'zoomIndicator';
-      indicator.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.95);
-        color: #00ffcc;
-        padding: 20px 40px;
-        border-radius: 15px;
-        font-size: 26px;
-        font-weight: 700;
-        z-index: 999999;
-        transition: opacity 0.3s;
-        border: 2px solid #00ffcc;
-        box-shadow: 0 0 30px rgba(0, 255, 204, 0.5);
-      `;
-      document.body.appendChild(indicator);
-    }
-    
-    indicator.textContent = `🔍 Magnifier: ${zoomLevel.toFixed(1)}x`;
+    indicator.textContent = text;
     indicator.style.opacity = '1';
     
-    // Auto-hide after delay
     clearTimeout(indicator.timeout);
     indicator.timeout = setTimeout(() => {
       indicator.style.opacity = '0';
-    }, 1200);
+    }, 1500);
   }
 
-  /**
-   * Shows initial tip about keyboard shortcuts
-   */
-  function showInitialTip() {
-    const zoomTip = document.createElement('div');
-    zoomTip.id = 'zoomTip';
-    zoomTip.innerHTML = '💡 <strong>Tip:</strong> Use Ctrl + <strong>+</strong> or <strong>–</strong> to adjust magnifier zoom';
-    document.body.appendChild(zoomTip);
-    
-    setTimeout(() => zoomTip.style.opacity = 1, 600);
-    setTimeout(() => zoomTip.style.opacity = 0, 6000);
-  }
-
-  /**
-   * Initialize magnifier functionality
-   */
   function init() {
-    // Check if required elements exist
-    if (!magnifier || !magnifierContent) {
-      console.error('Magnifier elements not found in DOM');
-      return;
-    }
+    if (!magnifier || !magnifierContent) return;
 
-    // Attach event listeners
     document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
+
+    // Initial tip
+    setTimeout(() => {
+      const tip = document.getElementById('zoomTip');
+      if (tip) tip.style.opacity = '1';
+    }, 1000);
     
-    // Show initial tip
-    showInitialTip();
-    
-    console.log('Optivox Magnifier initialized successfully');
+    // Auto-hide tip
+    setTimeout(() => {
+      const tip = document.getElementById('zoomTip');
+      if (tip) tip.style.opacity = '0';
+    }, 8000);
   }
 
-  // Initialize when DOM is ready
+  // A11y Controls logic
+  function initA11y() {
+    const LS_KEY = 'optivox_a11y_prefs';
+    let prefs = JSON.parse(localStorage.getItem(LS_KEY) || '{"contrast":false,"font":false}');
+
+    const apply = () => {
+      document.body.classList.toggle('a11y-high-contrast', prefs.contrast);
+      document.body.classList.toggle('a11y-large-font', prefs.font);
+      
+      const cBtn = document.getElementById('contrastBtn');
+      const fBtn = document.getElementById('fontBtn');
+      if (cBtn) cBtn.setAttribute('aria-pressed', prefs.contrast);
+      if (fBtn) fBtn.setAttribute('aria-pressed', prefs.font);
+      
+      localStorage.setItem(LS_KEY, JSON.stringify(prefs));
+      
+      // Re-clone if a11y changes to reflect styles in magnifier
+      contentCloned = false;
+      if (isMagnifying) clonePageContent();
+    };
+
+    document.getElementById('contrastBtn')?.addEventListener('click', () => {
+      prefs.contrast = !prefs.contrast;
+      apply();
+    });
+
+    document.getElementById('fontBtn')?.addEventListener('click', () => {
+      prefs.font = !prefs.font;
+      apply();
+    });
+
+    apply();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => { init(); initA11y(); });
   } else {
     init();
+    initA11y();
   }
 
 })();
-
-// === Accessibility Controls ===
-document.addEventListener('DOMContentLoaded', () => {
-  const contrastBtn = document.getElementById('contrastBtn');
-  const fontBtn = document.getElementById('fontBtn');
-  const motionBtn = document.getElementById('motionBtn');
-  const root = document.documentElement;
-
-  // restore saved states (from localStorage)
-  if (localStorage.getItem('highContrast') === 'true')
-    document.body.classList.add('a11y-high-contrast');
-  if (localStorage.getItem('largeFont') === 'true')
-    document.body.classList.add('a11y-large-font');
-  if (localStorage.getItem('reducedMotion') === 'true')
-    root.style.setProperty('--reduced', '1');
-
-  // toggle High Contrast
-  contrastBtn?.addEventListener('click', () => {
-    document.body.classList.toggle('a11y-high-contrast');
-    const active = document.body.classList.contains('a11y-high-contrast');
-    contrastBtn.setAttribute('aria-pressed', active);
-    localStorage.setItem('highContrast', active);
-  });
-
-  // toggle Large Font
-  fontBtn?.addEventListener('click', () => {
-    document.body.classList.toggle('a11y-large-font');
-    const active = document.body.classList.contains('a11y-large-font');
-    fontBtn.setAttribute('aria-pressed', active);
-    localStorage.setItem('largeFont', active);
-  });
-
-  // toggle Reduced Motion
-  motionBtn?.addEventListener('click', () => {
-    const reduced = root.style.getPropertyValue('--reduced') === '1';
-    root.style.setProperty('--reduced', reduced ? '0' : '1');
-    motionBtn.setAttribute('aria-pressed', !reduced);
-    localStorage.setItem('reducedMotion', (!reduced).toString());
-  });
-});
-

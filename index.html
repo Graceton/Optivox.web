@@ -8,6 +8,7 @@
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="magnifier.css">
 
   <!--
   Revised CSS:
@@ -479,98 +480,7 @@
       font-weight: 700;
     }
 
-    /* =========================
-     Magnifier refinements
-     ========================= */
-    #magnifier {
-      position: fixed;
-      width: 220px;
-      height: 220px;
-      border-radius: 50%;
-      border: 2px solid rgba(0, 255, 204, 0.9);
-      overflow: hidden;
-      pointer-events: none;
-      z-index: 99999;
-      display: none;
-      box-shadow: 0 10px 40px rgba(0, 255, 204, 0.08);
-      transition: transform .08s linear, opacity .18s linear;
-      background: rgba(6, 8, 12, 0.12);
-      backdrop-filter: blur(2px) saturate(1.02);
-    }
-
-    /* subtle halo */
-    #magnifier::after {
-      content: "";
-      position: absolute;
-      inset: -12px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 30%, rgba(0, 255, 204, 0.06), transparent 30%);
-      pointer-events: none;
-    }
-
-    #magnifierContent {
-      position: absolute;
-      left: 0;
-      top: 0;
-      transform-origin: 0 0;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    /* Zoom tip */
-    #zoomTip {
-      position: fixed;
-      bottom: 22px;
-      right: 22px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      background: rgba(3, 6, 10, 0.76);
-      color: var(--accent);
-      border: 1px solid rgba(0, 255, 204, 0.08);
-      font-weight: 600;
-      box-shadow: 0 8px 30px rgba(0, 255, 204, 0.04);
-      opacity: 0;
-      transition: opacity .5s;
-      z-index: 99998;
-    }
-
-    /* =========================
-     Responsive tweaks
-     ========================= */
-    @media (max-width:920px) {
-      .testimonial {
-        flex: 0 0 280px;
-      }
-
-      .hero p {
-        width: 92%;
-      }
-
-      .microbar {
-        right: 12px;
-        top: 84px;
-      }
-    }
-
-    @media (max-width:520px) {
-      nav {
-        padding: 10px 14px;
-      }
-
-      .microbar {
-        display: flex;
-        gap: 6px;
-        top: 72px;
-        right: 8px;
-      }
-
-      .nav-links {
-        display: none;
-      }
-
-      /* keep markup same; hide links on tiny widths (you can add a mobile menu later) */
-    }
-  </style>
+</style>
 </head>
 
 <body>
@@ -585,10 +495,10 @@
     <!-- keep same links as original -->
     <div class="nav-links" role="navigation" aria-label="Main links">
       <a href="index.html">Home</a>
-      <a href="About.html">About</a>
+      <a href="about.html">About</a>
       <a href="features.html">Features</a>
       <a href="team.html">Team</a>
-      <a href="Downloads.html">Download</a>
+      <a href="downloads.html">Download</a>
     </div>
   </nav>
 
@@ -599,13 +509,12 @@
     <button id="motionBtn" title="Toggle reduced motion" aria-pressed="false">Motion</button>
   </div> -->
 
-  <!-- Magnifier Element (kept identical structure) -->
+  <!-- Magnifier Elements -->
   <div id="magnifier" aria-hidden="true">
     <div id="magnifierContent"></div>
   </div>
-
-  <!-- Zoom Tip -->
-  <div id="zoomTip" role="status" aria-live="polite">Tip: Use Ctrl + '+' or '–' to zoom your page.</div>
+  <div id="zoomIndicator"></div>
+  <div id="zoomTip">💡 <strong>Tip:</strong> Use Ctrl + <strong>+</strong> or <strong>–</strong> to adjust magnifier zoom</div>
 
   <!-- Main content -->
   <main id="main" tabindex="-1">
@@ -655,183 +564,7 @@
     <div class="copyright">© <span>2025</span> Optivox | Developed with ❤️ for Accessibility</div>
   </footer>
 
-  <!-- External magnifier logic remains external as requested -->
   <script src="magnifier.js" defer></script>
-
-  <!-- Enhanced page behavior (reveal on scroll, microbar, focus, prefers-reduced-motion) -->
-  <script>
-    /* =========================
-       Utility & Feature JS
-       - Reveal-on-scroll with intersection observer
-       - Navbar shrink on scroll
-       - CTA click -> downloads
-       - Accessibility micro-bar with persistence
-       - Zoom tip show/hide
-       ========================= */
-
-    (function () {
-      'use strict';
-
-      // Shortcuts
-      const nav = document.getElementById('siteNav');
-      const cta = document.getElementById('downloadCTA');
-      const zoomTip = document.getElementById('zoomTip');
-      const micro = {
-        contrastBtn: document.getElementById('contrastBtn'),
-        fontBtn: document.getElementById('fontBtn'),
-        motionBtn: document.getElementById('motionBtn')
-      };
-
-      // NAV shrink on scroll
-      const SMALL_SCROLL = 50;
-      function handleNav() {
-        if (window.scrollY > SMALL_SCROLL) nav.classList.add('scrolled');
-        else nav.classList.remove('scrolled');
-      }
-      handleNav();
-      window.addEventListener('scroll', handleNav, { passive: true });
-
-      // CTA click -> keep same navigation behavior
-      cta.addEventListener('click', () => {
-        // slight micro-animation for click (and keyboard activation)
-        cta.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-6px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' });
-        // navigate to Download page
-        window.location.href = 'Downloads.html';
-      });
-
-      /* =========================
-         Reveal on scroll using Intersection Observer
-         - Staggers children reveals
-         - respects prefers-reduced-motion
-         ========================= */
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      if (!prefersReduced && 'IntersectionObserver' in window) {
-        const reveals = document.querySelectorAll('.reveal');
-        const io = new IntersectionObserver((entries, observer) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('visible');
-              // Optional stagger for neighboring reveal elements
-              // find next siblings and stagger
-              let next = entry.target.nextElementSibling;
-              let delay = 80;
-              while (next && next.classList.contains('reveal')) {
-                setTimeout(() => next.classList.add('visible'), delay);
-                delay += 80;
-                next = next.nextElementSibling;
-              }
-              observer.unobserve(entry.target);
-            }
-          });
-        }, { threshold: 0.18 });
-        reveals.forEach(r => io.observe(r));
-      } else {
-        // Reduced motion: reveal immediately
-        document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
-      }
-
-      /* =========================
-         Accessibility micro-bar
-         - Contrast toggle -> toggles a class that can be used to adjust styles
-         - Font toggle -> toggles larger font
-         - Motion toggle -> toggles reduced-motion class (affects only JS-driven animations)
-         - Persist settings in localStorage so they survive refresh
-         ========================= */
-      const LS_KEY = 'optivox_ui_prefs_v1';
-      const defaultPrefs = { contrast: false, largeFont: false, reducedMotion: prefersReduced };
-      let prefs = { ...defaultPrefs, ...(JSON.parse(localStorage.getItem(LS_KEY) || '{}')) };
-
-      function applyPrefs() {
-        document.body.classList.toggle('a11y-high-contrast', prefs.contrast);
-        document.body.classList.toggle('a11y-large-font', prefs.largeFont);
-        // If user explicitly requests reduced motion, we add a class to body so any further JS can check
-        document.documentElement.dataset.reduced = prefs.reducedMotion ? '1' : '0';
-        micro.contrastBtn.setAttribute('aria-pressed', String(!!prefs.contrast));
-        micro.fontBtn.setAttribute('aria-pressed', String(!!prefs.largeFont));
-        micro.motionBtn.setAttribute('aria-pressed', String(!!prefs.reducedMotion));
-      }
-      applyPrefs();
-
-      // Toggle handlers
-      micro.contrastBtn.addEventListener('click', () => {
-        prefs.contrast = !prefs.contrast;
-        saveAndApply();
-        micro.contrastBtn.focus();
-      });
-      micro.fontBtn.addEventListener('click', () => {
-        prefs.largeFont = !prefs.largeFont;
-        saveAndApply();
-        micro.fontBtn.focus();
-      });
-      micro.motionBtn.addEventListener('click', () => {
-        prefs.reducedMotion = !prefs.reducedMotion;
-        saveAndApply();
-        micro.motionBtn.focus();
-      });
-
-      function saveAndApply() {
-        localStorage.setItem(LS_KEY, JSON.stringify(prefs));
-        applyPrefs();
-      }
-
-      /* =========================
-         Zoom tip show -> polite and dismissible
-         ========================= */
-      setTimeout(() => {
-        zoomTip.style.opacity = 1;
-        // hide after 6s
-        setTimeout(() => zoomTip.style.opacity = 0, 6000);
-      }, 700);
-
-      // Keyboard: allow Esc to dismiss zoomTip immediately (accessibility)
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') zoomTip.style.opacity = 0;
-      });
-
-      /* =========================
-         Improve testimonial keyboard navigation:
-         - Arrow left/right move focus across testimonial cards (for small screens / keyboard users)
-         ========================= */
-      const tContainer = document.getElementById('testimonialContainer');
-      tContainer.addEventListener('keydown', (e) => {
-        // ensure the target is one of the testimonial articles
-        const active = document.activeElement;
-        if (!active || !active.classList.contains('testimonial')) return;
-        if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          const next = active.nextElementSibling || tContainer.firstElementChild;
-          next.focus();
-        } else if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          const prev = active.previousElementSibling || tContainer.lastElementChild;
-          prev.focus();
-        }
-      });
-
-      /* =========================
-         Respect reduced-motion preference for JS-driven micro-animations
-         - We check dataset.reduced if set by microbar
-         ========================= */
-      // Example: small floating effect for CTA only when motion allowed
-      if (!prefs.reducedMotion) {
-        // gentle infinite float (CSS would be better, but inline small js fallback)
-        let floatDir = 1;
-        setInterval(() => {
-          if (document.documentElement.dataset.reduced === '1') return;
-          cta.style.transform = `translateY(${Math.sin(Date.now() / 1400) * 3}px)`;
-        }, 150);
-      }
-
-      // Accessibility: ensure skip to content target receives focus
-      document.querySelector('.skip-link').addEventListener('click', (e) => {
-        const main = document.getElementById('main');
-        setTimeout(() => main.focus(), 10);
-      });
-
-      // Done
-    })();
-  </script>
 </body>
 
 </html>
