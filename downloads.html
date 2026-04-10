@@ -235,7 +235,7 @@
     <div>
       <a href="index.html">Home</a>
       <a href="about.html">About</a>
-      <a href="features.html">Features</a>
+      <a href="features.html">How to Use</a>
       <a href="downloads.html" class="active">Downloads</a>
       <a href="team.html">Team</a>
     </div>
@@ -245,6 +245,9 @@
   <section class="hero">
     <h1>Download Optivox</h1>
     <p>Choose your platform and experience accessibility redefined.</p>
+    <div style="margin-top: 30px;">
+        <button class="cta" style="background: transparent; border: 2px solid var(--accent); color: var(--accent); padding: 10px 25px; border-radius: 20px; cursor: pointer; font-weight: 600;" onclick="window.open('features.html', '_blank')">How to Use Guide</button>
+    </div>
   </section>
 
   <!-- Download Cards -->
@@ -254,17 +257,17 @@
      alt="Windows Logo" 
      style="width:80px;">
       <h3>Windows</h3>
-      <a href="https://github.com/Graceton/Optivox.web/releases/download/V3.2/Optivox.v3.2.zip" download>Download</a>
+      <a href="javascript:void(0)" onclick="smartDownload('https://github.com/Graceton/Optivox.web/releases/download/V3.2/Optivox.v3.2.zip')">Download</a>
     </div>
     <div class="card">
       <img src="https://cdn-icons-png.flaticon.com/512/888/888841.png" alt="macOS Logo" style="width:80px;">
       <h3>macOS</h3>
-      <a href="https://github.com/Graceton/Optivox.web/releases/download/V3.2/Optivox.v3.2.zip" download>Download</a>
+      <a href="javascript:void(0)" onclick="smartDownload('https://github.com/Graceton/Optivox.web/releases/download/V3.2/Optivox.v3.2.zip')">Download</a>
     </div>
     <div class="card">
       <img src="https://upload.wikimedia.org/wikipedia/commons/3/35/Tux.svg" alt="Linux Logo" style="width:80px;">
       <h3>Linux</h3>
-      <a href="https://github.com/Graceton/Optivox.web/releases/download/V3.2/Optivox.v3.2.zip" download>Download</a>
+      <a href="javascript:void(0)" onclick="smartDownload('https://github.com/Graceton/Optivox.web/releases/download/V3.2/Optivox.v3.2.zip')">Download</a>
     </div>
   </section>
 
@@ -273,17 +276,30 @@
     © 2025 OPTIVOX | Developed by Team Optivox
   </footer>
 
-  <!-- Card Hover Script -->
+  <!-- Scripts -->
   <script>
+    function smartDownload(url) {
+      // 1. Open User Manual in a new tab
+      window.open('User_Manual.html', '_blank');
+      
+      // 2. Trigger the zip download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
     const cards = document.querySelectorAll('.card');
     cards.forEach(card => {
       card.addEventListener('mouseover', () => {
         card.style.transform = 'translateY(-10px)';
-        card.style.boxShadow = '0 0 35px rgba(0,255,204,0.4)';
+        card.style.boxShadow = '0 0 35px var(--shadow-glow)';
       });
       card.addEventListener('mouseout', () => {
         card.style.transform = 'translateY(0px)';
-        card.style.boxShadow = '0 0 20px rgba(0,255,204,0.2)';
+        card.style.boxShadow = '0 0 20px var(--shadow-light)';
       });
     });
   </script>
